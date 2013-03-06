@@ -88,6 +88,7 @@ public class TransportPutIndexTemplateAction extends TransportMasterNodeOperatio
                 .order(request.order())
                 .settings(request.settings())
                 .mappings(request.mappings())
+                .aliases(request.aliases())
                 .customs(request.customs())
                 .create(request.create()),
 
