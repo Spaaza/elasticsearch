@@ -23,6 +23,7 @@ import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.support.master.MasterNodeOperationRequestBuilder;
 import org.elasticsearch.client.ClusterAdminClient;
 import org.elasticsearch.client.internal.InternalClusterAdminClient;
+import org.elasticsearch.common.Priority;
 import org.elasticsearch.common.unit.TimeValue;
 
 /**
@@ -35,42 +36,42 @@ public class ClusterHealthRequestBuilder extends MasterNodeOperationRequestBuild
     }
 
     public ClusterHealthRequestBuilder setIndices(String... indices) {
-        request.setIndices(indices);
+        request.indices(indices);
         return this;
     }
 
     public ClusterHealthRequestBuilder setTimeout(TimeValue timeout) {
-        request.setTimeout(timeout);
+        request.timeout(timeout);
         return this;
     }
 
     public ClusterHealthRequestBuilder setTimeout(String timeout) {
-        request.setTimeout(timeout);
+        request.timeout(timeout);
         return this;
     }
 
     public ClusterHealthRequestBuilder setWaitForStatus(ClusterHealthStatus waitForStatus) {
-        request.setWaitForStatus(waitForStatus);
+        request.waitForStatus(waitForStatus);
         return this;
     }
 
     public ClusterHealthRequestBuilder setWaitForGreenStatus() {
-        request.setWaitForGreenStatus();
+        request.waitForGreenStatus();
         return this;
     }
 
     public ClusterHealthRequestBuilder setWaitForYellowStatus() {
-        request.setWaitForYellowStatus();
+        request.waitForYellowStatus();
         return this;
     }
 
     public ClusterHealthRequestBuilder setWaitForRelocatingShards(int waitForRelocatingShards) {
-        request.setWaitForRelocatingShards(waitForRelocatingShards);
+        request.waitForRelocatingShards(waitForRelocatingShards);
         return this;
     }
 
     public ClusterHealthRequestBuilder setWaitForActiveShards(int waitForActiveShards) {
-        request.setWaitForActiveShards(waitForActiveShards);
+        request.waitForActiveShards(waitForActiveShards);
         return this;
     }
 
@@ -78,7 +79,12 @@ public class ClusterHealthRequestBuilder extends MasterNodeOperationRequestBuild
      * Waits for N number of nodes. Use "12" for exact mapping, ">12" and "<12" for range.
      */
     public ClusterHealthRequestBuilder setWaitForNodes(String waitForNodes) {
-        request.setWaitForNodes(waitForNodes);
+        request.waitForNodes(waitForNodes);
+        return this;
+    }
+
+    public ClusterHealthRequestBuilder setWaitForEvents(Priority waitForEvents) {
+        request.waitForEvents(waitForEvents);
         return this;
     }
 

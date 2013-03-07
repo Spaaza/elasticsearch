@@ -26,6 +26,7 @@ import org.elasticsearch.action.admin.cluster.node.shutdown.NodesShutdownRequest
 import org.elasticsearch.action.admin.cluster.node.stats.NodesStatsRequest;
 import org.elasticsearch.action.admin.cluster.reroute.ClusterRerouteRequest;
 import org.elasticsearch.action.admin.cluster.settings.ClusterUpdateSettingsRequest;
+import org.elasticsearch.action.admin.cluster.shards.ClusterSearchShardsRequest;
 import org.elasticsearch.action.admin.cluster.state.ClusterStateRequest;
 import org.elasticsearch.action.admin.indices.alias.IndicesAliasesRequest;
 import org.elasticsearch.action.admin.indices.cache.clear.ClearIndicesCacheRequest;
@@ -74,8 +75,8 @@ public class Requests {
     }
 
     /**
-     * Create an index request against a specific index. Note the {@link IndexRequest#setType(String)} must be
-     * set as well and optionally the {@link IndexRequest#setId(String)}.
+     * Create an index request against a specific index. Note the {@link IndexRequest#type(String)} must be
+     * set as well and optionally the {@link IndexRequest#id(String)}.
      *
      * @param index The index name to index the request against
      * @return The index request
@@ -86,8 +87,8 @@ public class Requests {
     }
 
     /**
-     * Creates a delete request against a specific index. Note the {@link DeleteRequest#setType(String)} and
-     * {@link DeleteRequest#setId(String)} must be set.
+     * Creates a delete request against a specific index. Note the {@link DeleteRequest#type(String)} and
+     * {@link DeleteRequest#id(String)} must be set.
      *
      * @param index The index name to delete from
      * @return The delete request
@@ -118,7 +119,7 @@ public class Requests {
 
     /**
      * Creates a get request to get the JSON source from an index based on a type and id. Note, the
-     * {@link GetRequest#setType(String)} and {@link GetRequest#setId(String)} must be set.
+     * {@link GetRequest#type(String)} and {@link GetRequest#id(String)} must be set.
      *
      * @param index The index to get the JSON source from
      * @return The get request
@@ -370,6 +371,20 @@ public class Requests {
     }
 
     /**
+     * List all shards for the give search
+     */
+    public static ClusterSearchShardsRequest clusterSearchShardsRequest() {
+        return new ClusterSearchShardsRequest();
+    }
+
+    /**
+     * List all shards for the give search
+     */
+    public static ClusterSearchShardsRequest clusterSearchShardsRequest(String... indices) {
+        return new ClusterSearchShardsRequest(indices);
+    }
+
+    /**
      * Creates a nodes info request against all the nodes.
      *
      * @return The nodes info request
@@ -436,4 +451,5 @@ public class Requests {
     public static NodesRestartRequest nodesRestartRequest(String... nodesIds) {
         return new NodesRestartRequest(nodesIds);
     }
+
 }
