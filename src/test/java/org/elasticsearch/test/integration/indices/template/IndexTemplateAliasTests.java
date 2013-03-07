@@ -76,8 +76,8 @@ public class IndexTemplateAliasTests extends AbstractNodesTests {
                 .execute().actionGet();
 
         // index something into test_index, will match on template
-        client.index(indexRequest("test_index").setType("type1").setId("1").setSource("A", "A value").setRefresh(true)).actionGet();
-        client.index(indexRequest("test_index").setType("type2").setId("2").setSource("B", "B value").setRefresh(true)).actionGet();
+        client.index(indexRequest("test_index").type("type1").id("1").source("A", "A value").refresh(true)).actionGet();
+        client.index(indexRequest("test_index").type("type2").id("2").source("B", "B value").refresh(true)).actionGet();
         
         client.admin().cluster().prepareHealth().setWaitForGreenStatus().execute().actionGet();
         
