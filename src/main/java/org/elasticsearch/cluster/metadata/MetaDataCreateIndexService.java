@@ -147,6 +147,8 @@ public class MetaDataCreateIndexService extends AbstractComponent {
                     // we only find a template when its an API call (a new index)
                     // find templates, highest order are better matching
                     List<IndexTemplateMetaData> templates = findTemplates(request, currentState);
+                    
+                    Map<String, AliasMetaData> aliases = Maps.newHashMap();
 
                     Map<String, Custom> customs = Maps.newHashMap();
 
@@ -194,6 +196,15 @@ public class MetaDataCreateIndexService extends AbstractComponent {
                             } else {
                                 IndexMetaData.Custom merged = IndexMetaData.lookupFactorySafe(type).merge(existing, custom);
                                 customs.put(type, merged);
+                            }
+                        }
+                        // handle aliases
+                        for (Map.Entry<String, AliasMetaData> aliasEntry : template.aliases().entrySet()) {
+                            String type = aliasEntry.getKey();
+                            AliasMetaData alias = aliasEntry.getValue();
+                            AliasMetaData existing = aliases.get(type);
+                            if (existing == null) {
+                                aliases.put(type, alias);
                             }
                         }
                     }
@@ -298,6 +309,9 @@ public class MetaDataCreateIndexService extends AbstractComponent {
                     }
                     for (Map.Entry<String, Custom> customEntry : customs.entrySet()) {
                         indexMetaDataBuilder.putCustom(customEntry.getKey(), customEntry.getValue());
+                    }
+                    for (Map.Entry<String, AliasMetaData> aliasEntry : aliases.entrySet()) {
+                    	indexMetaDataBuilder.putAlias(aliasEntry.getValue());
                     }
                     indexMetaDataBuilder.state(request.state);
                     final IndexMetaData indexMetaData;

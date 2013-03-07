@@ -20,6 +20,7 @@
 package org.elasticsearch.cluster.metadata;
 
 import com.google.common.collect.ImmutableMap;
+
 import org.elasticsearch.common.collect.MapBuilder;
 import org.elasticsearch.common.compress.CompressedString;
 import org.elasticsearch.common.io.stream.StreamInput;
@@ -50,15 +51,18 @@ public class IndexTemplateMetaData {
 
     // the mapping source should always include the type as top level
     private final ImmutableMap<String, CompressedString> mappings;
+    
+    private final ImmutableMap<String, AliasMetaData> aliases;
 
     private final ImmutableMap<String, IndexMetaData.Custom> customs;
 
-    public IndexTemplateMetaData(String name, int order, String template, Settings settings, ImmutableMap<String, CompressedString> mappings, ImmutableMap<String, IndexMetaData.Custom> customs) {
+    public IndexTemplateMetaData(String name, int order, String template, Settings settings, ImmutableMap<String, CompressedString> mappings, ImmutableMap<String, AliasMetaData> aliases, ImmutableMap<String, IndexMetaData.Custom> customs) {
         this.name = name;
         this.order = order;
         this.template = template;
         this.settings = settings;
         this.mappings = mappings;
+        this.aliases = aliases;
         this.customs = customs;
     }
 
@@ -100,6 +104,14 @@ public class IndexTemplateMetaData {
 
     public ImmutableMap<String, CompressedString> getMappings() {
         return this.mappings;
+    }
+    
+    public ImmutableMap<String, AliasMetaData> aliases() {
+        return this.aliases;
+    }
+    
+    public ImmutableMap<String, AliasMetaData> getAliases() {
+        return this.aliases;
     }
 
     public ImmutableMap<String, IndexMetaData.Custom> customs() {
@@ -155,6 +167,8 @@ public class IndexTemplateMetaData {
         private Settings settings = ImmutableSettings.Builder.EMPTY_SETTINGS;
 
         private MapBuilder<String, CompressedString> mappings = MapBuilder.newMapBuilder();
+        
+        private MapBuilder<String, AliasMetaData> aliases = MapBuilder.newMapBuilder();
 
         private MapBuilder<String, IndexMetaData.Custom> customs = MapBuilder.newMapBuilder();
 
@@ -168,6 +182,7 @@ public class IndexTemplateMetaData {
             template(indexTemplateMetaData.template());
             settings(indexTemplateMetaData.settings());
             mappings.putAll(indexTemplateMetaData.mappings());
+            aliases.putAll(indexTemplateMetaData.aliases());
             customs.putAll(indexTemplateMetaData.customs());
         }
 
@@ -209,6 +224,16 @@ public class IndexTemplateMetaData {
             mappings.put(mappingType, new CompressedString(mappingSource));
             return this;
         }
+        
+        public Builder putAlias(AliasMetaData aliasMetaData) {
+            aliases.put(aliasMetaData.alias(), aliasMetaData);
+            return this;
+        }
+
+        public Builder putAlias(AliasMetaData.Builder aliasMetaData) {
+            aliases.put(aliasMetaData.alias(), aliasMetaData.build());
+            return this;
+        }
 
         public Builder putCustom(String type, IndexMetaData.Custom customIndexMetaData) {
             this.customs.put(type, customIndexMetaData);
@@ -225,7 +250,7 @@ public class IndexTemplateMetaData {
         }
 
         public IndexTemplateMetaData build() {
-            return new IndexTemplateMetaData(name, order, template, settings, mappings.immutableMap(), customs.immutableMap());
+            return new IndexTemplateMetaData(name, order, template, settings, mappings.immutableMap(), aliases.immutableMap(), customs.immutableMap());
         }
 
         public static void toXContent(IndexTemplateMetaData indexTemplateMetaData, XContentBuilder builder, ToXContent.Params params) throws IOException {
@@ -294,6 +319,10 @@ public class IndexTemplateMetaData {
                                 builder.putMapping(mappingType, XContentFactory.jsonBuilder().map(mappingSource).string());
                             }
                         }
+                    }  else if ("aliases".equals(currentFieldName)) {
+                        while ((token = parser.nextToken()) != XContentParser.Token.END_OBJECT) {
+                            builder.putAlias(AliasMetaData.Builder.fromXContent(parser));
+                        }
                     } else {
                         // check if its a custom index metadata
                         IndexMetaData.Custom.Factory<IndexMetaData.Custom> factory = IndexMetaData.lookupFactory(currentFieldName);
@@ -318,6 +347,10 @@ public class IndexTemplateMetaData {
                                     builder.putMapping(mappingType, mappingSource);
                                 }
                             }
+                        }
+                    } else if ("aliases".equals(currentFieldName)) {
+                        while ((token = parser.nextToken()) != XContentParser.Token.END_ARRAY) {
+                        	builder.putAlias(AliasMetaData.Builder.fromXContent(parser));
                         }
                     }
                 } else if (token.isValue()) {
