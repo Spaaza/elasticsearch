@@ -32,6 +32,8 @@ import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.ClusterService;
 import org.elasticsearch.cluster.metadata.AliasMetaData;
 import org.elasticsearch.common.compress.CompressedString;
+import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.node.internal.InternalNode;
 import org.elasticsearch.test.integration.AbstractNodesTests;
@@ -68,23 +70,38 @@ public class IndexTemplateAliasTests extends AbstractNodesTests {
         clean();
         
         client.admin().indices().preparePutTemplate("template_with_aliases")
-        		.setTemplate("te*")
-                .addAlias("simple_alias", newAliasMetaDataBuilder("simple_alias").build())
-                .addAlias("filter_alias", newAliasMetaDataBuilder("filter_alias")
-                		.filter("{\"type\":{\"value\":\"type2\"}}")
-                		.build())
-                .execute().actionGet();
+        .setTemplate("te*")
+        .addAlias("simple_alias", newAliasMetaDataBuilder("simple_alias").build())
+        .addAlias("filter_alias", newAliasMetaDataBuilder("filter_alias")
+        		.filter("{\"type\":{\"value\":\"type2\"}}")
+        		.build())
+        .addAlias("complex_filter_alias", newAliasMetaDataBuilder("complex_filter_alias")
+        		.filter(XContentFactory.jsonBuilder().startObject()
+        				.startObject("terms")
+        					.array("_type", "typeX", "typeY", "typeZ")
+        					.field("execution").value("bool")
+        					.field("_cache").value(true)
+        				.endObject()
+       			) 
+    			.build())			
+    	.execute().actionGet();
 
         // index something into test_index, will match on template
-        client.index(indexRequest("test_index").type("type1").id("1").source("A", "A value").refresh(true)).actionGet();
-        client.index(indexRequest("test_index").type("type2").id("2").source("B", "B value").refresh(true)).actionGet();
+        client.index(indexRequest("test_index").type("type1").id("1").source("field", "A value").refresh(true)).actionGet();
+        client.index(indexRequest("test_index").type("type2").id("2").source("field", "B value").refresh(true)).actionGet();
+        
+        client.index(indexRequest("test_index").type("typeX").id("3").source("field", "C value").refresh(true)).actionGet();
+        client.index(indexRequest("test_index").type("typeY").id("4").source("field", "D value").refresh(true)).actionGet();
+        client.index(indexRequest("test_index").type("typeZ").id("5").source("field", "E value").refresh(true)).actionGet();
         
         client.admin().cluster().prepareHealth().setWaitForGreenStatus().execute().actionGet();
         
-        AliasMetaData aliasMetaData = ((InternalNode) node("node1")).injector().getInstance(ClusterService.class).state().metaData().aliases().get("filter_alias").get("test_index");
-        assertThat(aliasMetaData.alias(), equalTo("filter_alias"));
-        assertThat(aliasMetaData.filter(), notNullValue(CompressedString.class));
+        AliasMetaData filterAliasMetaData = ((InternalNode) node("node1")).injector().getInstance(ClusterService.class).state().metaData().aliases().get("filter_alias").get("test_index");
+        assertThat(filterAliasMetaData.alias(), equalTo("filter_alias"));
+        assertThat(filterAliasMetaData.filter(), notNullValue(CompressedString.class));
         
+        AliasMetaData complexFilterAliasMetaData = ((InternalNode) node("node1")).injector().getInstance(ClusterService.class).state().metaData().aliases().get("complex_filter_alias").get("test_index");
+
         // Search the simple alias
         SearchResponse searchResponse = client.prepareSearch("simple_alias")
                 .setQuery(QueryBuilders.matchAllQuery())
@@ -93,7 +110,7 @@ public class IndexTemplateAliasTests extends AbstractNodesTests {
             logger.warn("failed search " + Arrays.toString(searchResponse.getShardFailures()));
         }
         assertThat(searchResponse.getFailedShards(), equalTo(0));
-        assertThat(searchResponse.getHits().totalHits(), equalTo(2l));
+        assertThat(searchResponse.getHits().totalHits(), equalTo(5l));
         
         // Search the filter alias expecting only one result of "type2"
         searchResponse = client.prepareSearch("filter_alias")
@@ -105,6 +122,16 @@ public class IndexTemplateAliasTests extends AbstractNodesTests {
         assertThat(searchResponse.getFailedShards(), equalTo(0));
         assertThat(searchResponse.getHits().totalHits(), equalTo(1l));
         assertThat(searchResponse.getHits().getAt(0).type(), equalTo("type2"));
+        
+        // Search the complex filter alias
+        searchResponse = client.prepareSearch("complex_filter_alias")
+                .setQuery(QueryBuilders.matchAllQuery())
+                .execute().actionGet();
+        if (searchResponse.getFailedShards() > 0) {
+            logger.warn("failed search " + Arrays.toString(searchResponse.getShardFailures()));
+        }
+        assertThat(searchResponse.getFailedShards(), equalTo(0));
+        assertThat(searchResponse.getHits().totalHits(), equalTo(3l));
       }
 
     private void clean() {
