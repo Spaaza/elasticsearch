@@ -24,6 +24,7 @@ import org.elasticsearch.ElasticSearchIllegalArgumentException;
 import org.elasticsearch.ElasticSearchParseException;
 import org.elasticsearch.action.ActionRequestValidationException;
 import org.elasticsearch.action.support.master.MasterNodeOperationRequest;
+import org.elasticsearch.cluster.metadata.AliasMetaData;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.collect.MapBuilder;
@@ -67,6 +68,8 @@ public class PutIndexTemplateRequest extends MasterNodeOperationRequest<PutIndex
 
     private Map<String, String> mappings = newHashMap();
 
+    private Map<String, AliasMetaData> aliases = newHashMap();
+    
     private Map<String, IndexMetaData.Custom> customs = newHashMap();
 
     private TimeValue timeout = new TimeValue(10, TimeUnit.SECONDS);
@@ -191,7 +194,7 @@ public class PutIndexTemplateRequest extends MasterNodeOperationRequest<PutIndex
         mappings.put(type, source);
         return this;
     }
-
+    
     /**
      * The cause for this index template creation.
      */
@@ -278,6 +281,14 @@ public class PutIndexTemplateRequest extends MasterNodeOperationRequest<PutIndex
                     }
                     mapping(entry1.getKey(), (Map<String, Object>) entry1.getValue());
                 }
+            } else if (name.equals("aliases")) {
+                Map<String, Object> aliases = (Map<String, Object>) entry.getValue();
+                for (Map.Entry<String, Object> entry1 : aliases.entrySet()) {
+                    if (!(entry1.getValue() instanceof Map)) {
+                        throw new ElasticSearchIllegalArgumentException("Malformed aliases section for type [" + entry1.getKey() + "], should include an inner object describing the mapping");
+                    }
+                    aliases.put(entry1.getKey(), (Map<String, Object>) entry1.getValue());
+                }
             } else {
                 // maybe custom?
                 IndexMetaData.Custom.Factory factory = IndexMetaData.lookupFactory(name);
@@ -341,6 +352,15 @@ public class PutIndexTemplateRequest extends MasterNodeOperationRequest<PutIndex
     Map<String, IndexMetaData.Custom> customs() {
         return this.customs;
     }
+       
+    Map<String, AliasMetaData> aliases() {
+        return this.aliases;
+    }
+    
+    public PutIndexTemplateRequest alias(AliasMetaData alias) {
+        aliases.put(alias.getAlias(), alias);
+        return this;
+    }
 
     /**
      * Timeout to wait till the put mapping gets acknowledged of all current cluster nodes. Defaults to
@@ -369,26 +389,32 @@ public class PutIndexTemplateRequest extends MasterNodeOperationRequest<PutIndex
 
     @Override
     public void readFrom(StreamInput in) throws IOException {
-        super.readFrom(in);
-        cause = in.readString();
-        name = in.readString();
-        template = in.readString();
-        order = in.readInt();
-        create = in.readBoolean();
-        settings = readSettingsFromStream(in);
-        timeout = readTimeValue(in);
-        int size = in.readVInt();
-        for (int i = 0; i < size; i++) {
-            mappings.put(in.readString(), in.readString());
-        }
-        int customSize = in.readVInt();
-        for (int i = 0; i < customSize; i++) {
-            String type = in.readString();
-            IndexMetaData.Custom customIndexMetaData = IndexMetaData.lookupFactorySafe(type).readFrom(in);
-            customs.put(type, customIndexMetaData);
-        }
-    }
+    	super.readFrom(in);
 
+    	cause = in.readString();
+    	name = in.readString();
+    	template = in.readString();
+    	order = in.readInt();
+    	create = in.readBoolean();
+    	settings = readSettingsFromStream(in);
+    	timeout = readTimeValue(in);
+    	int size = in.readVInt();
+    	for (int i = 0; i < size; i++) {
+    		mappings.put(in.readString(), in.readString());
+    	}        
+    	int aliasesSize = in.readVInt();
+    	for (int i = 0; i < aliasesSize; i++) {
+    		AliasMetaData aliasMd = AliasMetaData.Builder.readFrom(in);
+    		aliases.put(aliasMd.alias(), aliasMd);
+    	}
+    	int customSize = in.readVInt();
+    	for (int i = 0; i < customSize; i++) {
+    		String type = in.readString();
+    		IndexMetaData.Custom customIndexMetaData = IndexMetaData.lookupFactorySafe(type).readFrom(in);
+    		customs.put(type, customIndexMetaData);
+    	}
+    }
+    
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
@@ -403,6 +429,10 @@ public class PutIndexTemplateRequest extends MasterNodeOperationRequest<PutIndex
         for (Map.Entry<String, String> entry : mappings.entrySet()) {
             out.writeString(entry.getKey());
             out.writeString(entry.getValue());
+        }
+        out.writeVInt(aliases().size());
+        for (AliasMetaData aliasMd : aliases().values()) {
+            AliasMetaData.Builder.writeTo(aliasMd, out);
         }
         out.writeVInt(customs.size());
         for (Map.Entry<String, IndexMetaData.Custom> entry : customs.entrySet()) {
