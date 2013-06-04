@@ -634,11 +634,7 @@
                     <mappings>
                         <mapping>
                             <directory>/etc/elasticsearch/</directory>
-                            <configuration>true</configuration>
-                        </mapping>
-                        <mapping>
-                            <directory>/etc/elasticsearch/</directory>
-                            <configuration>true</configuration>
+                            <configuration>noreplace</configuration>
                             <sources>
                                 <source>
                                     <location>config/</location>
@@ -650,7 +646,7 @@
                         </mapping>
                         <mapping>
                             <directory>/etc/sysconfig/</directory>
-                            <configuration>true</configuration>
+                            <configuration>noreplace</configuration>
                             <sources>
                                 <source>
                                     <location>src/rpm/sysconfig</location>
@@ -881,6 +877,26 @@
                                 </pluginExecution>
                             </pluginExecutions>
                         </lifecycleMappingMetadata>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-eclipse-plugin</artifactId>
+                    <configuration>
+                        <additionalConfig>
+                            <file>
+                                <name>.settings/org.eclipse.jdt.core.prefs</name>
+                                <location>src/eclipse/dot.settings/org.eclipse.jdt.core.prefs</location>
+                            </file>
+                            <file>
+                                <name>.settings/org.eclipse.jdt.ui.prefs</name>
+                                <location>src/eclipse/dot.settings/org.eclipse.jdt.ui.prefs</location>
+                            </file>
+                            <file>
+                                <name>.settings/org.eclipse.core.resources.prefs</name>
+                                <location>src/eclipse/dot.settings/org.eclipse.core.resources.prefs</location>
+                            </file>
+                        </additionalConfig>
                     </configuration>
                 </plugin>
             </plugins>
